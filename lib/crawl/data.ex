@@ -34,4 +34,8 @@ defmodule Crawl.Data do
     end
     loop(pid)
   end
+
+
+  def filter_urls do
+  end
 end

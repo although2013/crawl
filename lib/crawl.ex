@@ -8,11 +8,26 @@ defmodule Crawl do
     process(pid, first_url)
   end
 
+  def get_page(reason, 0) do
+    {:error, reason}
+  end
+
+  def get_page(url, retry) do
+    IO.puts("retry #{retry}, #{Time.utc_now} #{url}")
+    case HTTPoison.get(url) do
+      {:ok, response} -> {:ok, response}
+      {:error, _} ->
+        wait = :math.pow(2, (8-2*retry))
+        :timer.sleep(round(1000*wait))
+        get_page(url, (retry-1))
+    end
+  end
+
   def process(pid, url) do
-    IO.puts(url)
-    {:ok, response} = HTTPoison.get(url)
+    IO.puts(inspect(url))
 
     unless exist(pid, url) do
+      {:ok, response} = get_page(url, 3)
       save(pid, url, response.body)
 
       links = response.body
@@ -25,7 +40,9 @@ defmodule Crawl do
         fulllink = URI.merge("https://suumo.jp", link)
                     |> URI.to_string
                     |> String.trim
-        process(pid, fulllink)
+        if String.starts_with?(fulllink, "https") do
+          process(pid, fulllink)
+        end
       end)
     end
   end
