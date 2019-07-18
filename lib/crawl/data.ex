@@ -16,7 +16,7 @@ defmodule Crawl.Data do
       "'#{String.replace(map[key], "'", "''")}'"
     end) |> Enum.join(", ")
 
-    "INSERT INTO suumo (#{Enum.join(keys, ", ")}) VALUES (#{values})"
+    "INSERT INTO suumo (#{Enum.join(keys, ", ")}) VALUES (#{values})ON CONFLICT (url) DO NOTHING;"
   end
 
   def loop(pid) do

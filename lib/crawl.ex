@@ -3,9 +3,10 @@ require IEx
 defmodule Crawl do
   def main do
     HTTPoison.start
-    first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=013&ae=06401&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&rn=0640"
+    first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=011&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&ek=064053820&ek=064053840&rn=0640"
+
     {:ok, pid} = Crawl.Data.run
-    process(pid, first_url)
+    process(first_url, pid)
   end
 
   def get_page(reason, 0) do
@@ -23,9 +24,7 @@ defmodule Crawl do
     end
   end
 
-  def process(pid, url) do
-    IO.puts(inspect(url))
-
+  def process(url, pid) do
     unless exist(pid, url) do
       {:ok, response} = get_page(url, 3)
       save(pid, url, response.body)
@@ -33,29 +32,53 @@ defmodule Crawl do
       links = response.body
         |> Floki.find("body a")
         |> Floki.attribute("href")
-        |> Enum.filter(&Regex.match?(~r/chintai\//, &1))
+        |> Enum.filter(fn link ->
+                  Regex.match?(~r/(bc_|\/jj\/|jnc_)/, link) &&
+                  Regex.match?(~r/\/chintai\//, link)
+                end)
+        |> Enum.map(fn link ->
+            URI.merge("https://suumo.jp", link)
+                |> URI.to_string
+                |> String.trim
+        end)
         |> Enum.uniq()
+        |> Enum.filter(fn link ->
+                  String.starts_with?(link, "https") &&
+                  !Regex.match?(~r/(void\(0\)|\/showLogin\/|\/kankyo\/|\.css\/|favicon.ico)/, link)
+                end)
 
       Enum.each(links, fn link ->
-        fulllink = URI.merge("https://suumo.jp", link)
-                    |> URI.to_string
-                    |> String.trim
-        if String.starts_with?(fulllink, "https") do
-          process(pid, fulllink)
-        end
+        IO.puts("--------------------")
+        IO.puts(link)
       end)
+      Enum.each(links, fn link ->
+        process(link, pid)
+      end)
+
+      # stream = Task.async_stream(
+      #                 links,
+      #                 Crawl,
+      #                 :process,
+      #                 [pid],
+      #                 max_concurrency: 1,
+      #                 ordered: false)
+      # Stream.run(stream)
     end
   end
 
   def save(pid, url, body) do
-    send(pid, {self(), :create, %{url: url, body: body}})
+    try do
+      send(pid, {self(), :create, %{url: url, body: body}})
+    rescue
+      e -> IO.puts(inspect(e))
+    end
   end
 
   def exist(pid, url) do
     send(pid, {self(), :exist, url})
     receive do
       value -> 
-        IO.puts("#{value}, #{url}")
+        IO.puts("#{inspect(value)}, #{url}")
         value
     end
   end
