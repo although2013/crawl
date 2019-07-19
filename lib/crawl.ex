@@ -33,7 +33,7 @@ defmodule Crawl do
         |> Floki.find("body a")
         |> Floki.attribute("href")
         |> Enum.filter(fn link ->
-                  Regex.match?(~r/(bc_|\/jj\/|jnc_)/, link) &&
+                  Regex.match?(~r/(bc_\d+\/|\/jj\/|jnc_\d+\/)/, link) &&
                   Regex.match?(~r/\/chintai\//, link)
                 end)
         |> Enum.map(fn link ->
@@ -44,13 +44,9 @@ defmodule Crawl do
         |> Enum.uniq()
         |> Enum.filter(fn link ->
                   String.starts_with?(link, "https") &&
-                  !Regex.match?(~r/(void\(0\)|\/showLogin\/|\/kankyo\/|\.css\/|favicon.ico)/, link)
+                  !Regex.match?(~r/(void\(0\)|\/showLogin\/|\/kankyo\/|\/tenpo\/|\.css\/|favicon.ico)/, link)
                 end)
 
-      Enum.each(links, fn link ->
-        IO.puts("--------------------")
-        IO.puts(link)
-      end)
       Enum.each(links, fn link ->
         process(link, pid)
       end)
