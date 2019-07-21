@@ -8,7 +8,10 @@ defmodule Crawl.Application do
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
-      # {Crawl.Data.run, []},
+      %{
+        id: Crawl,
+        start: {Crawl, :start_link, []}
+      }
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

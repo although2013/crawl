@@ -1,12 +1,17 @@
 require IEx
 
 defmodule Crawl do
-  def main do
+  def start_link do
     HTTPoison.start
-    first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=011&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&ek=064053820&ek=064053840&rn=0640"
+    Crawl.Data.start_link
 
-    {:ok, pid} = Crawl.Data.run
-    process(first_url, pid)
+    first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=011&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&ek=064053820&ek=064053840&rn=0640"
+    # if exist?(first_url) do
+    #   IO.puts("cccccccccccc")
+    #   %{rows: [[_, first_url]]} = Crawl.Data.last
+    # end
+
+    Task.start_link(fn -> process(first_url) end)
   end
 
   def get_page(reason, 0) do
@@ -24,16 +29,17 @@ defmodule Crawl do
     end
   end
 
-  def process(url, pid) do
-    unless exist(pid, url) do
+  def process(url) do
+    unless exist?(url) do
+      # TODO get_page return could not match
       {:ok, response} = get_page(url, 3)
-      save(pid, url, response.body)
+      save(url, response.body)
 
       links = response.body
         |> Floki.find("body a")
         |> Floki.attribute("href")
         |> Enum.filter(fn link ->
-                  Regex.match?(~r/(bc_\d+\/|\/jj\/|jnc_\d+\/)/, link) &&
+                  Regex.match?(~r/(\?bc_\d+\/|\/jj\/|jnc_\d+\/)/, link) &&
                   Regex.match?(~r/\/chintai\//, link)
                 end)
         |> Enum.map(fn link ->
@@ -48,7 +54,7 @@ defmodule Crawl do
                 end)
 
       Enum.each(links, fn link ->
-        process(link, pid)
+        process(link)
       end)
 
       # stream = Task.async_stream(
@@ -62,21 +68,12 @@ defmodule Crawl do
     end
   end
 
-  def save(pid, url, body) do
-    try do
-      send(pid, {self(), :create, %{url: url, body: body}})
-    rescue
-      e -> IO.puts(inspect(e))
-    end
+  def save(url, body) do
+    Crawl.Data.create(%{url: url, body: body})
   end
 
-  def exist(pid, url) do
-    send(pid, {self(), :exist, url})
-    receive do
-      value -> 
-        IO.puts("#{inspect(value)}, #{url}")
-        value
-    end
+  def exist?(url) do
+    Crawl.Data.exist?(url)
   end
 
 end

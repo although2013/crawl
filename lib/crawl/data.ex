@@ -1,13 +1,28 @@
 defmodule Crawl.Data do
-  def run do
+  use Agent
+
+  def start_link do
     :application.ensure_all_started(:postgrex)
     {:ok, pid} = Postgrex.start_link(hostname: "localhost", username: "postgres", password: "", database: "gehao")
-    
-    Task.start_link(fn -> loop(pid) end)
+    Agent.start_link(fn -> pid end, name: __MODULE__)
+  end
+
+  def pid do
+    Agent.get(__MODULE__, & &1)
   end
 
   def exist?(url) do
-    "SELECT id FROM suumo WHERE url='#{url}'"
+    sql = "SELECT id FROM suumo WHERE url='#{url}'"
+    %{num_rows: num_rows} = Postgrex.query!(pid(), sql, [])
+    cond do
+      num_rows > 0 -> true
+      true -> false
+    end
+  end
+
+  def last do
+    sql = "SELECT id, url FROM suumo ORDER BY id DESC LIMIT 1"
+    Postgrex.query!(pid(), sql, [])
   end
 
   def create(map) do
@@ -16,26 +31,43 @@ defmodule Crawl.Data do
       "'#{String.replace(map[key], "'", "''")}'"
     end) |> Enum.join(", ")
 
-    "INSERT INTO suumo (#{Enum.join(keys, ", ")}, created_at) VALUES (#{values}, '#{DateTime.utc_now()}') ON CONFLICT (url) DO NOTHING;"
+    sql = "INSERT INTO suumo (#{Enum.join(keys, ", ")}, created_at) VALUES (#{values}, '#{DateTime.utc_now()}') ON CONFLICT (url) DO NOTHING;"
+    Postgrex.query!(pid(), sql, [])
   end
 
-  def loop(pid) do
-    receive do
-      {caller, :create, map} ->
-        Postgrex.query!(pid, create(map), [])
-      {caller, :exist, url} ->
-        %{num_rows: num_rows} = Postgrex.query!(pid, exist?(url), [])
-        result = cond do
-          num_rows > 0 -> true
-          true -> false
-        end
+  # def loop(pid) do
+  #   receive do
+  #     {caller, :create, map} ->
+  #       Postgrex.query!(pid, create(map), [])
+  #     {caller, :exist, url} ->
+  #       %{num_rows: num_rows} = Postgrex.query!(pid, exist?(url), [])
+  #       result = cond do
+  #         num_rows > 0 -> true
+  #         true -> false
+  #       end
 
-        send(caller, result)
-    end
-    loop(pid)
-  end
+  #       send(caller, result)
+  #   end
+  #   loop(pid)
+  # end
 
 
-  def filter_urls do
-  end
+  # def filter_urls do
+  # end
 end
+
+
+
+# -- Drop table
+
+# -- DROP TABLE public.suumo;
+
+# CREATE TABLE public.suumo (
+#   id bigserial NOT NULL,
+#   url varchar NOT NULL,
+#   body text NULL,
+#   created_at timestamp NULL,
+#   CONSTRAINT suumo_pkey PRIMARY KEY (id)
+# );
+# CREATE UNIQUE INDEX suumo_url_idx ON public.suumo USING btree (url);
+# CREATE UNIQUE INDEX suumo_id_idx ON public.suumo (id);

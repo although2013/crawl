@@ -30,7 +30,6 @@ class Crawl < ActiveRecord::Base
       properties: props
     }
   end
-
 end
 
 p Crawl.last.to_json
