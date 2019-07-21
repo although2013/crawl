@@ -3,7 +3,8 @@ defmodule Crawl.Data do
 
   def start_link do
     :application.ensure_all_started(:postgrex)
-    {:ok, pid} = Postgrex.start_link(hostname: "localhost", username: "postgres", password: "", database: "gehao")
+    pwd = System.get_env("sql_password", "")
+    {:ok, pid} = Postgrex.start_link(hostname: "localhost", username: "postgres", password: pwd, database: "gehao")
     Agent.start_link(fn -> pid end, name: __MODULE__)
   end
 
