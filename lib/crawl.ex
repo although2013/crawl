@@ -33,7 +33,8 @@ defmodule Crawl do
     unless exist?(url) do
       # TODO get_page return could not match
       {:ok, response} = get_page(url, 3)
-      save(url, response.body)
+      body = extract(response.body)
+      save(url, body)
 
       links = response.body
         |> Floki.find("body a")
@@ -66,6 +67,23 @@ defmodule Crawl do
       #                 ordered: false)
       # Stream.run(stream)
     end
+  end
+
+  def extract(str) do
+    
+    str |> Floki.find(".property_view_note-list span")
+        |> Enum.each(fn item -> IO.puts(Floki.text(item)) end)
+
+      # page.css()
+      #   .each_slice(2)
+      #   .each { |a| props[a.first.text.strip] = a.last.text.gsub(/\s+/, "") }
+    # {
+    #   id: id,
+    #   url: url.delete_prefix("https://suumo.jp/"),
+    #   title: page.css('title').text,
+    #   price: page.css('.property_view_main-emphasis').text.strip,
+    #   properties: props
+    # }
   end
 
   def save(url, body) do

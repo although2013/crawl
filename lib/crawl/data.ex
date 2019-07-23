@@ -22,7 +22,7 @@ defmodule Crawl.Data do
   end
 
   def last do
-    sql = "SELECT id, url FROM suumo ORDER BY id DESC LIMIT 1"
+    sql = "SELECT id, url, body FROM suumo ORDER BY id DESC LIMIT 1"
     Postgrex.query!(pid(), sql, [])
   end
 
