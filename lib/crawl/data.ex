@@ -26,6 +26,11 @@ defmodule Crawl.Data do
     Postgrex.query!(pid(), sql, [])
   end
 
+  def find(id) do
+    sql = "SELECT id, url, body FROM suumo WHERE id=#{id} LIMIT 1"
+    Postgrex.query!(pid(), sql, [])
+  end
+
   def create(map) do
     keys = Map.keys(map)
     values = Enum.map(keys, fn key ->

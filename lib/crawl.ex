@@ -1,21 +1,19 @@
 require IEx
 
 defmodule Crawl do
-  def start_link(url) do
+  def start_link do
     HTTPoison.start
     Crawl.Data.start_link
+    Crawl.Queue.start_link
 
-    first_url = url
-    # if exist?(first_url) do
-    #   IO.puts("cccccccccccc")
-    #   %{rows: [[_, first_url]]} = Crawl.Data.last
-    # end
+    first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=011&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&ek=064053820&ek=064053840&rn=0640"
+    
 
-    Task.start_link(fn -> process(first_url) end)
+    Task.start_link(fn -> process(:one, first_url) end)
   end
 
-  def get_page(reason, 0) do
-    {:error, reason}
+  def get_page(_, 0) do
+    {:ok, %{body: ""}}
   end
 
   def get_page(url, retry) do
@@ -29,18 +27,47 @@ defmodule Crawl do
     end
   end
 
-  def process(url) do
-    unless exist?(url) do
-      # TODO get_page return could not match
-      {:ok, response} = get_page(url, 3)
-      body = extract(response.body)
-      save(url, body)
+  def process(:one, link) do
+    {:ok, response} = get_page(link, 3)
 
-      links = response.body
-        |> Floki.find("body a")
+    bc_links(response.body) |> Crawl.Queue.enqueue
+    jj_links(response.body) |> Crawl.Queue.enqueue
+    :timer.sleep(200)
+
+    link = Crawl.Queue.dequeue()
+    process(:multi, link)
+  end
+
+  def process(:multi, link) do
+    exist = exist?(link)
+    IO.puts("exist: #{exist}, #{length(Crawl.Queue.queue)}, #{link}")
+
+    unless exist do
+      {:ok, response} = get_page(link, 3)
+
+      Task.async(fn -> save(link, response.body) end)
+      # if length(Crawl.Queue.queue) < 300 do
+        bc_links(response.body) |> Crawl.Queue.enqueue
+        jj_links(response.body) |> Crawl.Queue.enqueue
+      # end
+    end
+
+    link = Crawl.Queue.dequeue()
+    process(:multi, link)
+  end
+
+  def bc_links(body) do
+    Crawl.Extract.bc_ids(body)
+        |> Enum.map(fn id ->
+          "https://suumo.jp/chintai/bc_#{id}/"
+        end)
+  end
+
+  def jj_links(body) do
+    Floki.find(body, "body a")
         |> Floki.attribute("href")
         |> Enum.filter(fn link ->
-                  Regex.match?(~r/(\?bc_\d+\/|\/jj\/|jnc_\d+\/)/, link) &&
+                  Regex.match?(~r/\/jj\/.+?page/, link) &&
                   Regex.match?(~r/\/chintai\//, link)
                 end)
         |> Enum.map(fn link ->
@@ -49,45 +76,13 @@ defmodule Crawl do
                 |> String.trim
         end)
         |> Enum.uniq()
-        |> Enum.filter(fn link ->
-                  String.starts_with?(link, "https") &&
-                  !Regex.match?(~r/(void\(0\)|\/showLogin\/|\/kankyo\/|\/tenpo\/|\.css\/|favicon.ico)/, link)
-                end)
-
-      Enum.each(links, fn link ->
-        process(link)
-      end)
-
-      # stream = Task.async_stream(
-      #                 links,
-      #                 Crawl,
-      #                 :process,
-      #                 [pid],
-      #                 max_concurrency: 1,
-      #                 ordered: false)
-      # Stream.run(stream)
-    end
-  end
-
-  def extract(str) do
-    
-    str |> Floki.find(".property_view_note-list span")
-        |> Enum.each(fn item -> IO.puts(Floki.text(item)) end)
-
-      # page.css()
-      #   .each_slice(2)
-      #   .each { |a| props[a.first.text.strip] = a.last.text.gsub(/\s+/, "") }
-    # {
-    #   id: id,
-    #   url: url.delete_prefix("https://suumo.jp/"),
-    #   title: page.css('title').text,
-    #   price: page.css('.property_view_main-emphasis').text.strip,
-    #   properties: props
-    # }
   end
 
   def save(url, body) do
-    Crawl.Data.create(%{url: url, body: body})
+    if Regex.match?(~r/\/bc_\d+\//, url) && String.length(body) > 1 do
+      json = Crawl.Extract.to_json(body) |> Poison.encode!
+      Crawl.Data.create(%{url: url, body: json})
+    end
   end
 
   def exist?(url) do
