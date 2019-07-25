@@ -28,7 +28,8 @@ defmodule Crawl.Data do
 
   def find(id) do
     sql = "SELECT id, url, body FROM suumo WHERE id=#{id} LIMIT 1"
-    Postgrex.query!(pid(), sql, [])
+    %{rows: [[id, url, body]]} = Postgrex.query!(pid(), sql, [])
+    %{id: id, url: url, body: body}
   end
 
   def create(map) do

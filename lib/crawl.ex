@@ -44,11 +44,13 @@ defmodule Crawl do
 
     unless exist do
       {:ok, response} = get_page(link, 3)
-
+      IO.puts("Get Page #{Time.utc_now}")
       Task.async(fn -> save(link, response.body) end)
+      IO.puts("Async called save #{Time.utc_now}")
       # if length(Crawl.Queue.queue) < 300 do
         bc_links(response.body) |> Crawl.Queue.enqueue
         jj_links(response.body) |> Crawl.Queue.enqueue
+      IO.puts("Put links to queue #{Time.utc_now}")
       # end
     end
 
