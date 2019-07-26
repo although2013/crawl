@@ -21,6 +21,8 @@ defmodule Crawl.Data do
     end
   end
 
+  def existed_links([]), do: []
+
   def existed_links(list) do
     list = Enum.map(list, & "'#{&1}'")
             |> Enum.join(", ")
