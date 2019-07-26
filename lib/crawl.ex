@@ -9,7 +9,7 @@ defmodule Crawl do
 
     first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=011&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&ek=064053820&ek=064053840&rn=0640"
 
-    Task.start_link(fn -> process(first_url) end)
+    Task.start_link(fn -> process_first(first_url) end)
   end
 
   def get_page(_, 0) do
@@ -26,9 +26,18 @@ defmodule Crawl do
     end
   end
 
+  def process_first(link) do
+    {:ok, response} = get_page(link, 3)
+    bc_links(response.body) |> Crawl.Queue.enqueue
+    jj_links(response.body) |> Crawl.Queue.enqueue
+
+    link = Crawl.Queue.dequeue()
+    process(link)
+  end
+
   def process(link) do
     before = Time.utc_now
-    IO.puts("#{before}, #{link}")
+    IO.puts("#{before}, #{Crawl.Counter.value} #{link}")
     {:ok, response} = get_page(link, 3)
     time_diff = Time.diff(Time.utc_now, before, :millisecond) / 1000
     IO.puts("#{time_diff}s #{link}")
