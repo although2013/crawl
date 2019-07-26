@@ -28,6 +28,7 @@ defmodule Crawl do
 
   def process(link) do
     before = Time.utc_now
+    IO.puts("#{before}, #{link}")
     {:ok, response} = get_page(link, 3)
     time_diff = Time.diff(Time.utc_now, before, :millisecond) / 1000
     IO.puts("#{time_diff}s #{link}")
