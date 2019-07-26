@@ -4,12 +4,12 @@ defmodule Crawl do
   def start_link do
     HTTPoison.start
     Crawl.Data.start_link
+    Crawl.Counter.start_link
     Crawl.Queue.start_link
 
     first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ra=011&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2=&ek=064053820&ek=064053840&rn=0640"
-    
 
-    Task.start_link(fn -> process(:one, first_url) end)
+    Task.start_link(fn -> process(first_url) end)
   end
 
   def get_page(_, 0) do
@@ -17,7 +17,6 @@ defmodule Crawl do
   end
 
   def get_page(url, retry) do
-    IO.puts("retry #{retry}, #{Time.utc_now} #{url}")
     case HTTPoison.get(url) do
       {:ok, response} -> {:ok, response}
       {:error, _} ->
@@ -27,41 +26,30 @@ defmodule Crawl do
     end
   end
 
-  def process(:one, link) do
+  def process(link) do
+    before = Time.utc_now
     {:ok, response} = get_page(link, 3)
+    time_diff = Time.diff(Time.utc_now, before, :millisecond) / 1000
+    IO.puts("#{time_diff}s #{link}")
 
-    bc_links(response.body) |> Crawl.Queue.enqueue
-    jj_links(response.body) |> Crawl.Queue.enqueue
-    :timer.sleep(200)
-
-    link = Crawl.Queue.dequeue()
-    process(:multi, link)
-  end
-
-  def process(:multi, link) do
-    exist = exist?(link)
-    IO.puts("exist: #{exist}, #{length(Crawl.Queue.queue)}, #{link}")
-
-    unless exist do
-      {:ok, response} = get_page(link, 3)
-      Task.async(fn -> save(link, response.body) end)
-      # if length(Crawl.Queue.queue) < 300 do
-      Task.async(fn ->
+    Task.async(fn ->
+      save(link, response.body)
+      if Crawl.Counter.value < 1000 do
         bc_links(response.body) |> Crawl.Queue.enqueue
-        jj_links(response.body) |> Crawl.Queue.enqueue
-      end)
-      # end
-    end
+      end
+      jj_links(response.body) |> Crawl.Queue.enqueue
+    end)
 
     link = Crawl.Queue.dequeue()
-    process(:multi, link)
+    process(link)
   end
 
   def bc_links(body) do
     Crawl.Extract.bc_ids(body)
         |> Enum.map(fn id ->
-          "https://suumo.jp/chintai/bc_#{id}/"
-        end)
+            "https://suumo.jp/chintai/bc_#{id}/"
+          end)
+        |> Enum.uniq()
   end
 
   def jj_links(body) do

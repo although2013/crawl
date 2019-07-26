@@ -21,6 +21,14 @@ defmodule Crawl.Data do
     end
   end
 
+  def existed_links(list) do
+    list = Enum.map(list, & "'#{&1}'")
+            |> Enum.join(", ")
+    sql = "SELECT url FROM suumo WHERE url in (#{list})"
+    %{rows: rows} = Postgrex.query!(pid(), sql, [])
+    Enum.flat_map(rows, & &1)
+  end
+
   def last do
     sql = "SELECT id, url, body FROM suumo ORDER BY id DESC LIMIT 1"
     Postgrex.query!(pid(), sql, [])
