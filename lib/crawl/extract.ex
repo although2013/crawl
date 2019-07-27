@@ -17,7 +17,7 @@ defmodule Crawl.Extract do
               |> Map.merge(detail_props(body))
 
     rescue
-      IEx.pry
+      _ -> IEx.pry
     end
 
     house
