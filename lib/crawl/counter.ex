@@ -9,6 +9,10 @@ defmodule Crawl.Counter do
     Agent.get(Counter, & &1)
   end
 
+  def assign(value) do
+    Agent.update(Counter, fn _list -> value end)
+  end
+
   def add(value) do
     Agent.update(Counter, &(&1+value))
   end
