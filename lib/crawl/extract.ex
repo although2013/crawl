@@ -17,7 +17,9 @@ defmodule Crawl.Extract do
               |> Map.merge(detail_props(body))
 
     rescue
-      _ -> IEx.pry
+      _ ->
+        File.write("ccc.html", body)
+        raise "oops"
     end
 
     house
