@@ -11,9 +11,14 @@ defmodule Crawl.Extract do
   end
 
   def to_json(body) do
-    house = basic_price(body)
+    try do
+      house = basic_price(body)
               |> Map.merge(basic_address(body))
               |> Map.merge(detail_props(body))
+
+    rescue
+      IEx.pry
+    end
 
     house
   end
