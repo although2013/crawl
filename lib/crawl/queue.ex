@@ -22,6 +22,10 @@ defmodule Crawl.Queue do
     {:reply, state, state}
   end
 
+  def handle_cast({:update, value}, _state) do
+    {:noreply, value}
+  end
+
   @doc """
   GenServer.handle_cast/2 callback
   """
@@ -46,6 +50,8 @@ defmodule Crawl.Queue do
   def queue, do: GenServer.call(__MODULE__, :queue)
   def enqueue(value) when is_list(value), do: GenServer.cast(__MODULE__, {:enqueue_list, value})
   def enqueue(value), do: GenServer.cast(__MODULE__, {:enqueue, value})
+  def update(value), do: GenServer.cast(__MODULE__, {:update, value})
+
 
   def dequeue, do: GenServer.call(__MODULE__, :dequeue)
 end
