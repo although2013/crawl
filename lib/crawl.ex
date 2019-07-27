@@ -78,10 +78,11 @@ defmodule Crawl do
 
   def save(url, body) do
     IO.puts("save #{url}")
-    json = ""
-    if Regex.match?(~r/\/bc_\d+\//, url) && String.length(body) > 1 do
-      json = Crawl.Extract.to_json(body) |> Poison.encode!
-    end
+    json = if Regex.match?(~r/\/bc_\d+\//, url) && String.length(body) > 1 do
+             Crawl.Extract.to_json(body) |> Poison.encode!
+           else
+             ""
+           end
     Crawl.Data.create(%{url: url, body: json})
   end
 
