@@ -18,8 +18,7 @@ defmodule Crawl.Extract do
 
     rescue
       _ ->
-        File.write("ccc.html", body)
-        raise "oops"
+        File.write("c#{Time.utc_now}", body)
     end
 
     house
