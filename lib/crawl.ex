@@ -30,6 +30,7 @@ defmodule Crawl do
     {:ok, response} = get_page(link, 3)
     bc_links(response.body) |> Crawl.Queue.enqueue
     jj_links(response.body) |> Crawl.Queue.enqueue
+    save(link, response.body)
 
     link = Crawl.Queue.dequeue()
     process(link)
@@ -44,9 +45,7 @@ defmodule Crawl do
 
     Task.async(fn ->
       save(link, response.body)
-      if Crawl.Counter.value < 1000 do
-        bc_links(response.body) |> Crawl.Queue.enqueue
-      end
+      bc_links(response.body) |> Crawl.Queue.enqueue
       jj_links(response.body) |> Crawl.Queue.enqueue
     end)
 
@@ -78,10 +77,11 @@ defmodule Crawl do
   end
 
   def save(url, body) do
+    json = ""
     if Regex.match?(~r/\/bc_\d+\//, url) && String.length(body) > 1 do
       json = Crawl.Extract.to_json(body) |> Poison.encode!
-      Crawl.Data.create(%{url: url, body: json})
     end
+    Crawl.Data.create(%{url: url, body: json})
   end
 
   def exist?(url) do
