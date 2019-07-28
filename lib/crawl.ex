@@ -25,18 +25,18 @@ defmodule Crawl do
     {:ok, %{body: ""}}
   end
 
-  def get_page(url, retry) do
-    case HTTPoison.get(url) do
+  def get_page(link, retry) do
+    case HTTPoison.get(link) do
       {:ok, response} -> {:ok, response}
       {:error, _} ->
         wait = :math.pow(2, (8-2*retry))
         :timer.sleep(round(1000*wait))
-        get_page(url, (retry-1))
+        get_page(link, (retry-1))
     end
   end
 
   def process_first(link) do
-    unless exist?(url) do
+    unless exist?(link) do
       {:ok, response} = get_page(link, 3)
       bc_links(response.body) |> Crawl.Queue.enqueue
       jj_links(response.body) |> Crawl.Queue.enqueue
@@ -48,17 +48,19 @@ defmodule Crawl do
   end
 
   def process(link) do
-    before = Time.utc_now
-    IO.puts("#{before}, #{Crawl.Counter.value} #{link}")
-    {:ok, response} = get_page(link, 3)
-    time_diff = Time.diff(Time.utc_now, before, :millisecond) / 1000
-    IO.puts("#{time_diff}s #{link}")
+    unless exist?(link) do
+      before = Time.utc_now
+      IO.puts("#{before}, #{Crawl.Counter.value} #{link}")
+      {:ok, response} = get_page(link, 3)
+      time_diff = Time.diff(Time.utc_now, before, :millisecond) / 1000
+      IO.puts("#{time_diff}s #{link}")
 
-    Task.async(fn ->
-      save(link, response.body)
-      bc_links(response.body) |> Crawl.Queue.enqueue
-      jj_links(response.body) |> Crawl.Queue.enqueue
-    end)
+      Task.async(fn ->
+        save(link, response.body)
+        bc_links(response.body) |> Crawl.Queue.enqueue
+        jj_links(response.body) |> Crawl.Queue.enqueue
+      end)
+    end
 
     link = Crawl.Queue.dequeue()
     process(link)
