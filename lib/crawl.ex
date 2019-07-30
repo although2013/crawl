@@ -36,12 +36,10 @@ defmodule Crawl do
   end
 
   def process_first(link) do
-    unless exist?(link) do
-      {:ok, response} = get_page(link, 3)
-      bc_links(response.body) |> Crawl.Queue.enqueue
-      jj_links(response.body) |> Crawl.Queue.enqueue
-      save(link, response.body)
-    end
+    {:ok, response} = get_page(link, 3)
+    bc_links(response.body) |> Crawl.Queue.enqueue
+    jj_links(response.body) |> Crawl.Queue.enqueue
+    save(link, response.body)
 
     link = Crawl.Queue.dequeue()
     process(link)
