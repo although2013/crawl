@@ -1,13 +1,13 @@
 require IEx
 
 defmodule Crawl do
-  def start_link do
+  def start_link(link) do
     HTTPoison.start
     Crawl.Data.start_link
     Crawl.Counter.start_link
     Crawl.Queue.start_link
 
-    first_url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?ar=030&bs=040&ta=11&sc=11101&sc=11102&sc=11103&sc=11104&sc=11105&sc=11106&sc=11107&sc=11108&sc=11109&sc=11110&sc=11201&sc=11202&sc=11203&sc=11208&sc=11219&sc=11223&sc=11224&sc=11237&cb=0.0&ct=9999999&et=9999999&cn=9999999&mb=0&mt=9999999&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2="
+    first_url = link
 
     Task.start_link(fn -> uniq_queue() end)
     Task.start_link(fn -> process_first(first_url) end)
