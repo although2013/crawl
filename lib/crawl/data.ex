@@ -43,7 +43,7 @@ defmodule Crawl.Data do
   end
 
   def select(offset, limit \\ 5000) do
-    sql = "SELECT id, url, body FROM suumo order by id desc offset #{offset} limit #{limit}"
+    sql = "SELECT id, url, body FROM suumo where body!='' order by id desc offset #{offset} limit #{limit}"
     %{rows: rows} = Postgrex.query!(pid(), sql, [])
     rows
   end

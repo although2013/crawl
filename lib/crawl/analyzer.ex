@@ -18,7 +18,7 @@ defmodule Crawl.Analyzer do
 
   def all_process() do
     # count = Crawl.Data.count
-    continues_select(1, 5000, 100000, [])
+    continues_select(1, 1000, 100000, [])
   end
 
   def continues_select(offset, limits, max, tasks) do
