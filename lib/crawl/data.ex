@@ -36,6 +36,18 @@ defmodule Crawl.Data do
     Postgrex.query!(pid(), sql, [])
   end
 
+  def count do
+    sql = "SELECT count(id) FROM suumo"
+    %{rows: [[count]]} = Postgrex.query!(pid(), sql, [])
+    count
+  end
+
+  def select(offset, limit \\ 5000) do
+    sql = "SELECT id, url, body FROM suumo order by id desc offset #{offset} limit #{limit}"
+    %{rows: rows} = Postgrex.query!(pid(), sql, [])
+    rows
+  end
+
   def find(id) do
     sql = "SELECT id, url, body FROM suumo WHERE id=#{id} LIMIT 1"
     %{rows: [[id, url, body]]} = Postgrex.query!(pid(), sql, [])
