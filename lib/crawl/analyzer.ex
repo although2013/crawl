@@ -3,8 +3,12 @@ defmodule Crawl.Analyzer do
     Task.async(fn ->
       Enum.map(rows, fn row ->
         try do
-          addr = Enum.at(row, 2) |> Poison.decode!() |> Map.get("所在地")
-          Regex.scan(~r/.+市/, addr) |> Enum.join
+          addr = case Poison.decode!(Enum.at(row, 2)) do
+            ok when is_bitstring(ok) -> %{"所在地" => "error市"}
+            bd when is_map(bd) -> bd
+          end |> Map.get("所在地")
+
+          Regex.scan(~r/.+(?:市|区)/, addr) |> Enum.join
         rescue
           _ -> IO.puts(inspect(row))
         end
