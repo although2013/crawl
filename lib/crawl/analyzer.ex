@@ -17,8 +17,8 @@ defmodule Crawl.Analyzer do
   end
 
   def all_process() do
-    # count = Crawl.Data.count
-    continues_select(1, 1000, 100000, [])
+    count = Crawl.Data.count
+    continues_select(1, 2000, count, [])
   end
 
   def continues_select(offset, limits, max, tasks) do
@@ -27,10 +27,11 @@ defmodule Crawl.Analyzer do
       ref = address_process(rows)
       continues_select(offset+limits, limits, max, [ref | tasks])
     else
-      Enum.flat_map(tasks, fn task -> Task.await(task) end)
+      r = Enum.flat_map(tasks, fn task -> Task.await(task) end)
           |> Enum.reduce(%{}, fn x, acc ->
               Map.update(acc, x, 1, &(&1 + 1))
             end)
+      IO.puts(inspect(r))
     end
   end
 
