@@ -2,8 +2,12 @@ defmodule Crawl.Analyzer do
   def address_process(rows) do
     Task.async(fn ->
       Enum.map(rows, fn row ->
-        addr = Enum.at(row, 2) |> Poison.decode!() |> Map.get("所在地")
-        Regex.scan(~r/.+市/, addr) |> Enum.join
+        try do
+          addr = Enum.at(row, 2) |> Poison.decode!() |> Map.get("所在地")
+          Regex.scan(~r/.+市/, addr) |> Enum.join
+        rescue
+          _ -> IO.puts(inspect(row))
+        end
       end)
     end)
   end
